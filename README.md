@@ -82,4 +82,3 @@ spota/
 **Built in Bahir Dar, Ethiopia**
 
 </div>
-```
