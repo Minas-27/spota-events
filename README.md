@@ -9,17 +9,17 @@
 
 </div>
 
-## 📱 About SPOTA
+##  About SPOTA
 SPOTA is a Flutter-based mobile application that helps users in Bahir Dar discover local events, book tickets using Ethiopian payment systems, and receive instant SMS confirmations.
 
 **Tagline:** *"Find Your Vibe in Bahir Dar"*
 
 ## ✨ Features
-- 🎭 **Event Discovery** - Browse concerts, festivals, university events
-- 💳 **Chapa Payments** - Secure Ethiopian payment processing
-- 📲 **SMS Tickets** - Instant booking confirmations via AfroMessage
-- 👑 **Multi-role System** - Attendees, Organizers, and Administrators
-- 🗺️ **Location-Based** - Find events near you in Bahir Dar
+- **Event Discovery** - Browse concerts, festivals, university events
+- **Chapa Payments** - Secure Ethiopian payment processing
+- **SMS Tickets** - Instant booking confirmations via AfroMessage
+- **Multi-role System** - Attendees, Organizers, and Administrators
+- **Location-Based** - Find events near you in Bahir Dar
 
 ## 🛠 Tech Stack
 - **Frontend:** Flutter
@@ -35,7 +35,7 @@ SPOTA is a Flutter-based mobile application that helps users in Bahir Dar discov
 - **Esubalew Worku** ([@esubaleww](https://github.com/esubaleww))
 - **Birtukan Nigussie** ([@yemariamnegn](https://github.com/yemariamnegn))
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Flutter SDK (3.0.0 or higher)
@@ -56,7 +56,7 @@ flutter pub get
 flutter run
 ```
 
-## 📁 Project Structure
+## Project Structure
 ```
 spota/
 ├── lib/
@@ -68,7 +68,7 @@ spota/
 └── test/              # Test files
 ```
 
-## 🤝 Contributing
+##  Contributing
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
