@@ -44,11 +44,11 @@ class Validators {
       return 'Please enter your phone number';
     }
 
-    // Ethiopian phone number validation (simple version)
-    final phoneRegex = RegExp(r'^\+251[0-9]{9}$|^0[0-9]{9}$');
+    // Ethiopian phone number validation: 09... or 07... or +251...
+    final phoneRegex = RegExp(r'^(\+251[79]\d{8}|0[79]\d{8})$');
 
     if (!phoneRegex.hasMatch(value)) {
-      return 'Please enter a valid Ethiopian phone number';
+      return 'Enter a valid number (e.g. 0912345678 or +251912345678)';
     }
 
     return null;
