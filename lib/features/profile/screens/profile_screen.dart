@@ -4,6 +4,7 @@ import 'package:spota_events/app/providers/auth_provider.dart';
 import 'package:spota_events/features/booking/screens/my_tickets_screen.dart';
 import 'package:spota_events/features/profile/screens/settings_screen.dart';
 import 'package:spota_events/features/profile/screens/edit_profile_screen.dart';
+import 'package:spota_events/shared/widgets/modern_dialog.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -170,7 +171,9 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  _showLogoutDialog(context);
+                  showModernLogoutDialog(context, () async {
+                    await authProvider.logout();
+                  });
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -243,37 +246,6 @@ class ProfileScreen extends StatelessWidget {
       trailing:
           const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       onTap: onTap,
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close dialog
-              final authProvider =
-                  Provider.of<AuthProvider>(context, listen: false);
-              await authProvider.logout();
-              if (context.mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              }
-            },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
