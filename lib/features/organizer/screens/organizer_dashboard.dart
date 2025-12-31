@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:spota_events/app/providers/auth_provider.dart';
 import 'create_event_screen.dart';
 import 'organizer_notifications_screen.dart';
+import 'package:spota_events/shared/models/event_model.dart';
+import 'package:spota_events/shared/services/event_service.dart';
+import 'package:spota_events/shared/widgets/modern_dialog.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});
@@ -14,61 +17,109 @@ class OrganizerDashboard extends StatefulWidget {
 class _OrganizerDashboardState extends State<OrganizerDashboard> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    _DashboardContent(), // Tab 0 - Dashboard
-    _EventsContent(), // Tab 1 - Events
-    _ProfileContent(), // Tab 2 - Profile
-  ];
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return _DashboardContent(
+          onManageEvents: () => setState(() => _currentIndex = 1),
+        );
+      case 1:
+        return _EventsContent();
+      case 2:
+        return _ProfileContent();
+      default:
+        return _DashboardContent(
+          onManageEvents: () => setState(() => _currentIndex = 1),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        backgroundColor: const Color(0xFF2563EB),
-        foregroundColor: Colors.white,
+        title: Text(
+          _getAppBarTitle(),
+          style: const TextStyle(
+            color: Color(0xFF2563EB),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.black.withOpacity(0.1),
+        scrolledUnderElevation: 2.0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OrganizerNotificationsScreen(),
-                ),
-              );
-            },
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined,
+                  color: Colors.black87),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrganizerNotificationsScreen(),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: const Color(0xFF2563EB),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event),
-            label: 'Events',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      body: _getScreen(_currentIndex),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: const Color(0xFF2563EB),
+          unselectedItemColor: Colors.grey[400],
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.event_outlined),
+              activeIcon: Icon(Icons.event),
+              label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
       floatingActionButton: _currentIndex == 1
           ? FloatingActionButton(
@@ -101,10 +152,17 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   }
 }
 
+final EventService _eventService = EventService(); // Shared service instance
+
 // DASHBOARD CONTENT
 class _DashboardContent extends StatelessWidget {
+  final VoidCallback onManageEvents;
+
+  const _DashboardContent({required this.onManageEvents});
+
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -134,12 +192,12 @@ class _DashboardContent extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Welcome, Organizer!',
+                          'Welcome, ${user.name}!',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -164,7 +222,7 @@ class _DashboardContent extends StatelessWidget {
 
             // Quick Stats
             const Text(
-              'Quick Stats',
+              'Performance Overview',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -173,26 +231,47 @@ class _DashboardContent extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Stats Cards
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Total Events',
-                    value: '12',
-                    icon: Icons.event,
-                    color: Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Tickets Sold',
-                    value: '458',
-                    icon: Icons.confirmation_number,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
+            StreamBuilder<List<Event>>(
+              stream: _eventService.getOrganizerEventsStream(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error loading stats: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+                final events = snapshot.data ?? [];
+                final totalSold = events.fold<int>(
+                    0, (sum, e) => sum + (e.totalTickets - e.availableTickets));
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Total Events',
+                        value: '${events.length}',
+                        icon: Icons.event,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Tickets Sold',
+                        value: '$totalSold',
+                        icon: Icons.confirmation_number,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 32),
@@ -233,9 +312,7 @@ class _DashboardContent extends StatelessWidget {
                     title: 'Manage Events',
                     subtitle: 'View all events',
                     color: Colors.blue,
-                    onTap: () {
-                      // Handled by bottom nav
-                    },
+                    onTap: onManageEvents,
                   ),
                 ),
               ],
@@ -253,15 +330,15 @@ class _DashboardContent extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -357,69 +434,70 @@ class _DashboardContent extends StatelessWidget {
 
 // EVENTS CONTENT
 class _EventsContent extends StatelessWidget {
-  final List<Map<String, dynamic>> _events = [
-    {
-      'id': '1',
-      'title': 'Bahir Dar Music Festival',
-      'location': 'City Stadium, Bahir Dar',
-      'date': '15 Dec 2024',
-      'ticketsSold': 87,
-      'totalTickets': 100,
-      'revenue': 13050,
-    },
-    {
-      'id': '2',
-      'title': 'Tech Workshop Series',
-      'location': 'EiTEX Campus',
-      'date': '30 Nov 2024',
-      'ticketsSold': 45,
-      'totalTickets': 100,
-      'revenue': 2250,
-    },
-    {
-      'id': '3',
-      'title': 'Cultural Night 2024',
-      'location': 'Cultural Center',
-      'date': '20 Oct 2024',
-      'ticketsSold': 23,
-      'totalTickets': 100,
-      'revenue': 1725,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Stats Overview
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            border: const Border(bottom: BorderSide(color: Colors.grey)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('${_events.length}', 'Total Events'),
-              _buildStatItem('355', 'Tickets Sold'),
-              _buildStatItem('17,025', 'Revenue (ETB)'),
-            ],
-          ),
-        ),
+    final user = context.read<AuthProvider>().currentUser;
 
-        // Events List
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _events.length,
-            itemBuilder: (context, index) {
-              final event = _events[index];
-              return _buildEventCard(event, context);
-            },
-          ),
-        ),
-      ],
+    return StreamBuilder<List<Event>>(
+      stream: _eventService
+          .getEventsStream(), // For simplicity viewing all, but should filter by org
+      builder: (context, snapshot) {
+        final allEvents = snapshot.data ?? [];
+        final orgEvents =
+            allEvents.where((e) => e.organizerId == user.uid).toList();
+
+        final totalSold = orgEvents.fold<int>(
+            0, (sum, e) => sum + (e.totalTickets - e.availableTickets));
+        final totalRevenue = orgEvents.fold<double>(
+            0.0,
+            (sum, e) =>
+                sum + (e.price * (e.totalTickets - e.availableTickets)));
+
+        return Column(
+          children: [
+            // Stats Overview
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: const Border(bottom: BorderSide(color: Colors.grey)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatItem('${orgEvents.length}', 'Total Events'),
+                  _buildStatItem('$totalSold', 'Tickets Sold'),
+                  _buildStatItem('${totalRevenue.toInt()}', 'Revenue (ETB)'),
+                ],
+              ),
+            ),
+
+            // Events List
+            Expanded(
+              child: orgEvents.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.event_note,
+                              size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          const Text('No events created yet'),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: orgEvents.length,
+                      itemBuilder: (context, index) {
+                        final event = orgEvents[index];
+                        return _buildEventCard(event, context);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -446,8 +524,10 @@ class _EventsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildEventCard(Map<String, dynamic> event, BuildContext context) {
-    final progress = event['ticketsSold'] / event['totalTickets'];
+  Widget _buildEventCard(Event event, BuildContext context) {
+    final ticketsSold = event.totalTickets - event.availableTickets;
+    final progress =
+        event.totalTickets > 0 ? ticketsSold / event.totalTickets : 0.0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -477,8 +557,19 @@ class _EventsContent extends StatelessWidget {
                   color: const Color(0xFF2563EB).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child:
-                    const Icon(Icons.event, color: Color(0xFF2563EB), size: 30),
+                child: event.imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.network(
+                          event.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.event,
+                                  color: Color(0xFF2563EB), size: 30),
+                        ),
+                      )
+                    : const Icon(Icons.event,
+                        color: Color(0xFF2563EB), size: 30),
               ),
               const SizedBox(width: 16),
               // Event Details
@@ -487,7 +578,7 @@ class _EventsContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      event['title'],
+                      event.title,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -496,7 +587,7 @@ class _EventsContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${event['date']} • ${event['location'].split(',').first}',
+                      '${event.date.day}/${event.date.month}/${event.date.year} • ${event.location.split(',').first}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -510,7 +601,7 @@ class _EventsContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    onPressed: () => _editEvent(event),
+                    onPressed: () => _editEvent(event, context),
                     icon: const Icon(Icons.edit_outlined,
                         size: 20, color: Color(0xFF2563EB)),
                     padding: EdgeInsets.zero,
@@ -549,7 +640,7 @@ class _EventsContent extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Tickets Sold: ${event['ticketsSold']}/${event['totalTickets']}',
+                          'Tickets Sold: $ticketsSold/${event.totalTickets}',
                           style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[600],
@@ -590,7 +681,7 @@ class _EventsContent extends StatelessWidget {
                         fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '${event['revenue']} ETB',
+                    '${(event.price * ticketsSold).toInt()} ETB',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -606,12 +697,16 @@ class _EventsContent extends StatelessWidget {
     );
   }
 
-  void _editEvent(Map<String, dynamic> event) {
-    // TODO: Implement edit event
+  void _editEvent(Event event, BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateEventScreen(event: event),
+      ),
+    );
   }
 }
 
-// PROFILE CONTENT
 class _ProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -619,58 +714,63 @@ class _ProfileContent extends StatelessWidget {
     final user = authProvider.currentUser;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // Profile Header
           Container(
             width: 120,
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.grey[300],
-              border: Border.all(color: const Color(0xFF2563EB), width: 3),
+              color: Colors.grey[200],
+              border: Border.all(color: const Color(0xFF2563EB), width: 4),
             ),
             child: const Icon(Icons.person, size: 50, color: Colors.grey),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
             user.name.isEmpty ? 'Organizer' : user.name,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             user.email,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 4),
-          Chip(
-            backgroundColor: const Color(0xFF2563EB).withOpacity(0.1),
-            label: const Text(
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF2563EB)),
+            ),
+            child: const Text(
               'Organizer',
-              style: TextStyle(color: Color(0xFF2563EB)),
+              style: TextStyle(
+                color: Color(0xFF2563EB),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-
           const SizedBox(height: 32),
-
-          // Organizer Info
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -682,45 +782,53 @@ class _ProfileContent extends StatelessWidget {
                   'Organizer Information',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
                   ),
                 ),
+                const SizedBox(height: 20),
+                _buildInfoRow(
+                  'Organization',
+                  user.organization ?? 'Not set',
+                ),
                 const SizedBox(height: 16),
-                _buildInfoRow('Organization', user.organization ?? 'Not set'),
                 _buildInfoRow(
-                    'Phone', user.phone.isNotEmpty ? user.phone : 'Not set'),
-                // Simple date formatting if intl package is not available or just use split
+                  'Phone',
+                  user.phone.isNotEmpty ? user.phone : 'Not set',
+                ),
+                const SizedBox(height: 16),
                 _buildInfoRow(
-                    'Member Since', user.createdAt.toString().split(' ').first),
+                  'Member Since',
+                  user.createdAt.toString().split(' ').first,
+                ),
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Action Buttons
+          const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                // Switch to attendee mode
-              },
-              child: const Text('Switch to Attendee Mode'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
+            height: 56,
             child: ElevatedButton(
-              onPressed: () async {
-                final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
-                await authProvider.logout();
+              onPressed: () {
+                showModernLogoutDialog(context, () async {
+                  await authProvider.logout();
+                });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              child: const Text('Logout'),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -729,31 +837,26 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
           ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
