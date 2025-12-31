@@ -3,6 +3,7 @@ import 'package:spota_events/shared/models/event_model.dart';
 import 'package:spota_events/features/events/screens/event_details_screen.dart';
 import 'package:spota_events/features/events/widgets/category_chip.dart';
 import 'package:spota_events/features/events/widgets/event_card.dart';
+import 'package:spota_events/shared/services/event_service.dart';
 
 class EventsListScreen extends StatefulWidget {
   final String category;
@@ -15,20 +16,12 @@ class EventsListScreen extends StatefulWidget {
 
 class _EventsListScreenState extends State<EventsListScreen> {
   String selectedCategory = 'All';
+  final EventService _eventService = EventService();
 
   @override
   void initState() {
     super.initState();
     selectedCategory = widget.category;
-  }
-
-  List<Event> get filteredEvents {
-    if (selectedCategory == 'All') {
-      return Event.sampleEvents;
-    }
-    return Event.sampleEvents
-        .where((event) => event.category == selectedCategory)
-        .toList();
   }
 
   @override
@@ -67,21 +60,61 @@ class _EventsListScreenState extends State<EventsListScreen> {
 
           // Events List
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: filteredEvents.map((event) {
-                return EventCard(
-                  event: event,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EventDetailsScreen(event: event),
-                      ),
+            child: StreamBuilder<List<Event>>(
+              stream: _eventService.getEventsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final events = snapshot.data ?? [];
+
+                // Filter by category if not 'All'
+                final filteredEvents = selectedCategory == 'All'
+                    ? events
+                    : events
+                        .where((e) => e.category == selectedCategory)
+                        .toList();
+
+                if (filteredEvents.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event_note,
+                            size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No $selectedCategory events found',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: filteredEvents.map((event) {
+                    return EventCard(
+                      event: event,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                EventDetailsScreen(event: event),
+                          ),
+                        );
+                      },
                     );
-                  },
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ),
         ],

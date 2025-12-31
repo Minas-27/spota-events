@@ -1,19 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:spota_events/shared/models/user_model.dart';
 import 'package:spota_events/shared/services/auth_service.dart';
 import 'dart:async';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  AuthService get authService => _authService;
   UserModel _currentUser = UserModel.empty();
   bool _isLoading = false;
   String? _error;
+  bool _isBypassed = false; // Flag to protect demo sessions
 
   // Getters
   UserModel get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _currentUser.uid.isNotEmpty;
+  Stream<List<UserModel>> get allUsersStream =>
+      _authService.getAllUsersStream();
 
   AuthProvider() {
     _init();
@@ -21,19 +25,18 @@ class AuthProvider with ChangeNotifier {
 
   void _init() {
     _authService.authStateChanges.listen((user) async {
+      // If we are in a demo bypass session, ignore real auth changes
+      if (_isBypassed) {
+        debugPrint('DEBUG: Auth state change ignored due to bypass');
+        return;
+      }
+
       print('DEBUG: Auth state changed, user: ${user?.email}');
       if (user != null) {
         _setLoading(true);
-        // User is logged in, fetch profile
         try {
           final userModel = await _authService.getCurrentUser();
-          print(
-              'DEBUG: Got user model: ${userModel?.email}, role: ${userModel?.role}');
-          // getCurrentUser now always returns a UserModel when user is not null
-          // It uses fallback data if Firestore is unavailable
           _currentUser = userModel ?? UserModel.empty();
-          print(
-              'DEBUG: Current user set to: ${_currentUser.email}, isLoggedIn: $isLoggedIn');
         } catch (e) {
           print('Error fetching user profile: $e');
           _currentUser = UserModel.empty();
@@ -47,16 +50,33 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
-  // void _fetchUserProfile(String uid) async {
-  //   // Disabled for mock mode
-  // }
-
   // Login
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     _error = null;
 
     try {
+      // --- DEVELOPER BYPASS FOR DEMO ---
+      if (kDebugMode &&
+          email.toLowerCase().trim() == 'admin@spota.com' &&
+          password == 'admin') {
+        debugPrint('DEVELOPER BYPASS: Identity verified as System Admin');
+        _isBypassed = true; // Lock immediately
+
+        _currentUser = UserModel(
+          uid: 'EVteSAv21SbJX7GKaxFsZbM85af1',
+          email: 'admin@spota.com',
+          name: 'System Admin',
+          phone: '+251911000000',
+          role: UserRole.admin,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1767134497907),
+        );
+
+        _isLoading = false; // Ensure loading stops
+        notifyListeners();
+        return true;
+      }
+
       _currentUser = await _authService.signIn(email, password);
       notifyListeners();
       return true;
@@ -69,7 +89,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Signup
+  // ... (rest of the provider methods same as before)
   Future<bool> signup({
     required String email,
     required String password,
@@ -81,17 +101,13 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     _error = null;
-
     try {
       if (email.isEmpty || password.isEmpty || name.isEmpty || phone.isEmpty) {
         throw Exception('Please fill all required fields');
       }
-
       if (password.length < 6) {
         throw Exception('Password must be at least 6 characters');
       }
-
-      print('DEBUG: Starting signup for $email');
       _currentUser = await _authService.signUp(
         email: email,
         password: password,
@@ -101,12 +117,9 @@ class AuthProvider with ChangeNotifier {
         organization: organization,
         bio: bio,
       );
-
-      print('DEBUG: Signup successful, user: ${_currentUser.email}');
       notifyListeners();
       return true;
     } catch (e) {
-      print('DEBUG: Signup error: $e');
       _error = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
@@ -115,31 +128,40 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Logout
   Future<void> logout() async {
     _setLoading(true);
     try {
+      _isBypassed = false;
       await _authService.signOut();
     } catch (e) {
       print('Error during logout: $e');
     } finally {
-      // Ensure user is cleared and loading is stopped regardless of errors
       _currentUser = UserModel.empty();
       notifyListeners();
       _setLoading(false);
     }
   }
 
-  // Password reset
+  Future<bool> deleteUser(String uid) async {
+    _setLoading(true);
+    try {
+      await _authService.deleteUser(uid);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<bool> resetPassword(String email) async {
     _setLoading(true);
     _error = null;
-
     try {
-      if (email.isEmpty) {
-        throw Exception('Please enter your email');
-      }
-
+      if (email.isEmpty) throw Exception('Please enter your email');
       await _authService.sendPasswordResetEmail(email);
       return true;
     } catch (e) {
@@ -151,7 +173,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Update user profile
   Future<bool> updateProfile({
     required String name,
     required String phone,
@@ -160,7 +181,6 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     _error = null;
-
     try {
       final updatedUser = UserModel(
         uid: _currentUser.uid,
@@ -172,10 +192,8 @@ class AuthProvider with ChangeNotifier {
         bio: bio,
         createdAt: _currentUser.createdAt,
       );
-
       await _authService.updateProfile(updatedUser);
       _currentUser = updatedUser;
-
       notifyListeners();
       return true;
     } catch (e) {

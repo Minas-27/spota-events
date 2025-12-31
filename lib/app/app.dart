@@ -5,6 +5,7 @@ import 'package:spota_events/core/themes/app_theme.dart';
 import 'package:spota_events/features/auth/screens/login_screen.dart';
 import 'package:spota_events/features/events/screens/home_screen.dart';
 import 'package:spota_events/features/organizer/screens/organizer_dashboard.dart';
+import 'package:spota_events/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:spota_events/shared/models/user_model.dart';
 
 class SpotaApp extends StatelessWidget {
@@ -62,6 +63,8 @@ class _AppNavigatorState extends State<AppNavigator> {
       final user = authProvider.currentUser;
       if (user.role == UserRole.organizer) {
         return const OrganizerDashboard();
+      } else if (user.role == UserRole.admin) {
+        return const AdminDashboardScreen();
       } else {
         return const HomeScreen();
       }

@@ -77,32 +77,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                    ),
-                    child:
-                        const Icon(Icons.person, size: 50, color: Colors.grey),
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF2563EB).withOpacity(0.2),
+                    width: 2,
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2563EB),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
-                ],
+                ),
+                child: const Icon(Icons.person,
+                    size: 50, color: Color(0xFF2563EB)),
               ),
               const SizedBox(height: 32),
               TextFormField(

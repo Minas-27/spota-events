@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:spota_events/features/booking/screens/booking_confirmation_screen.dart';
 import 'package:spota_events/shared/models/event_model.dart';
+import 'package:spota_events/shared/services/event_service.dart';
+import 'package:provider/provider.dart';
+import 'package:spota_events/app/providers/auth_provider.dart';
+import 'package:spota_events/shared/services/chapa_service.dart';
+import 'package:spota_events/features/booking/screens/payment_webview_screen.dart';
+import 'package:uuid/uuid.dart';
 
 class BookingScreen extends StatefulWidget {
   final Event event;
@@ -13,6 +19,9 @@ class BookingScreen extends StatefulWidget {
 
 class _BookingScreenState extends State<BookingScreen> {
   int ticketCount = 1;
+  final EventService _eventService = EventService();
+  final ChapaService _chapaService = ChapaService();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -84,10 +93,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-<<<<<<< HEAD
-=======
 
->>>>>>> 7c3ed60 (feat: Implement Firebase Authentication with Firestore integration)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -277,38 +283,86 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  bool _isLoading = false;
-
   void _handlePayment() async {
+    final auth = context.read<AuthProvider>();
+    final user = auth.currentUser;
+    final double totalPrice = widget.event.price * ticketCount;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Mock Payment Flow
-      await Future.delayed(const Duration(seconds: 2));
+      // 1. Initialize Chapa Transaction
+      final String txRef = 'TX-${const Uuid().v4().substring(0, 8)}';
 
-      if (mounted) {
-        // Show mock payment success
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Payment Successful (Demo)'),
-            backgroundColor: Colors.green,
+      final checkoutUrl = await _chapaService.initializeTransaction(
+        email: user.email,
+        firstName: user.name.split(' ').first,
+        lastName: user.name.contains(' ') ? user.name.split(' ').last : 'User',
+        amount: totalPrice,
+        txRef: txRef,
+        title: widget.event.title,
+      );
+
+      if (checkoutUrl == null) {
+        throw Exception('Failed to initialize payment gateway');
+      }
+
+      if (!mounted) return;
+
+      // 2. Open WebView for Payment
+      final bool? paymentResult = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentWebViewScreen(
+            checkoutUrl: checkoutUrl,
+            returnUrl: 'https://example.com/payment-success',
           ),
+        ),
+      );
+
+      if (paymentResult == true) {
+        // 3. Verify and Finalize Booking in Firestore
+        // For test mode, we'll assume success if the return URL was reached
+        await _eventService.bookTickets(
+          eventId: widget.event.id,
+          userId: user.uid,
+          quantity: ticketCount,
+          totalPrice: totalPrice,
+          phoneNumber: user.phone,
         );
 
-        final double totalPrice = widget.event.price * ticketCount;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingConfirmationScreen(
-              event: widget.event,
-              ticketCount: ticketCount,
-              totalPrice: totalPrice,
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Booking Successful!'),
+              backgroundColor: Colors.green,
             ),
-          ),
-        );
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookingConfirmationScreen(
+                event: widget.event.copyWith(
+                  availableTickets: widget.event.availableTickets - ticketCount,
+                ),
+                ticketCount: ticketCount,
+                totalPrice: totalPrice,
+              ),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment cancelled or failed'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

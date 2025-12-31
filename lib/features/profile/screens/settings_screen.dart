@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:spota_events/features/profile/screens/notifications_screen.dart';
+import 'package:spota_events/features/profile/screens/help_support_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -15,37 +17,29 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           _buildSettingsSection(
-            title: 'App Settings',
+            title: 'General',
             items: [
               _buildSettingsTile(
-                icon: Icons.language,
-                title: 'Language',
-                trailing: const Text('English'),
-                onTap: () {},
+                icon: Icons.notifications,
+                title: 'Notifications',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => NotificationsScreen()),
+                  );
+                },
               ),
               _buildSettingsTile(
-                icon: Icons.dark_mode,
-                title: 'Dark Mode',
-                trailing: Switch(
-                  value: false,
-                  onChanged: (value) {},
-                ),
-                onTap: () {},
-              ),
-            ],
-          ),
-          _buildSettingsSection(
-            title: 'Account',
-            items: [
-              _buildSettingsTile(
-                icon: Icons.lock,
-                title: 'Privacy Policy',
-                onTap: () {},
-              ),
-              _buildSettingsTile(
-                icon: Icons.description,
-                title: 'Terms of Service',
-                onTap: () {},
+                icon: Icons.help,
+                title: 'Help & Support',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const HelpSupportScreen()),
+                  );
+                },
               ),
             ],
           ),
@@ -73,17 +67,28 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
           child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: Colors.grey[600],
+              letterSpacing: 1.2,
             ),
           ),
         ),
-        ...items,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: items
+                .map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: item,
+                    ))
+                .toList(),
+          ),
+        ),
       ],
     );
   }
@@ -94,18 +99,40 @@ class SettingsScreen extends StatelessWidget {
     Widget? trailing,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.grey[700]),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      trailing: trailing ??
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: onTap,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        trailing: trailing ??
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: onTap,
+      ),
     );
   }
 }

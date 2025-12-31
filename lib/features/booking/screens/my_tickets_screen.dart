@@ -1,58 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:spota_events/app/providers/auth_provider.dart';
+import 'package:spota_events/shared/models/booking_model.dart';
+import 'package:spota_events/shared/services/event_service.dart';
 
 class MyTicketsScreen extends StatelessWidget {
   const MyTicketsScreen({super.key});
 
-  // Sample booked events data
-  final List<Map<String, dynamic>> bookedEvents = const [
-    {
-      'event': {
-        'id': '1',
-        'title': 'Bahir Dar Music Festival',
-        'location': 'City Stadium, Bahir Dar',
-        'date': '2024-12-15',
-        'imageUrl': 'assets/images/music_festival.jpg',
-      },
-      'ticketCount': 2,
-      'totalPrice': 300.0,
-      'ticketCode': 'SPOTA-MF-5A8B2C',
-      'bookingDate': '2024-11-20',
-      'status': 'upcoming', // upcoming, completed, cancelled
-    },
-    {
-      'event': {
-        'id': '2',
-        'title': 'BDU Tech Conference 2024',
-        'location': 'EiTEX Campus, Bahir Dar University',
-        'date': '2024-11-25',
-        'imageUrl': 'assets/images/tech_conference.jpg',
-      },
-      'ticketCount': 1,
-      'totalPrice': 50.0,
-      'ticketCode': 'SPOTA-TC-3D4E5F',
-      'bookingDate': '2024-11-18',
-      'status': 'upcoming',
-    },
-    {
-      'event': {
-        'id': '3',
-        'title': 'Lake Tana Boat Race',
-        'location': 'Lake Tana, Bahir Dar',
-        'date': '2024-10-10',
-        'imageUrl': 'assets/images/boat_race.jpg',
-      },
-      'ticketCount': 4,
-      'totalPrice': 100.0,
-      'ticketCode': 'SPOTA-BR-1A2B3C',
-      'bookingDate': '2024-09-28',
-      'status': 'completed',
-    },
-  ];
+  static final EventService _eventService = EventService();
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -66,179 +26,251 @@ class MyTicketsScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'Upcoming'),
               Tab(text: 'Completed'),
-              Tab(text: 'Cancelled'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
             // Upcoming Tickets
-            _buildTicketsList('upcoming'),
+            _buildTicketsList(context, 'upcoming'),
 
             // Completed Tickets
-            _buildTicketsList('completed'),
-
-            // Cancelled Tickets
-            _buildTicketsList('cancelled'),
+            _buildTicketsList(context, 'completed'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTicketsList(String status) {
-    final filteredTickets =
-        bookedEvents.where((ticket) => ticket['status'] == status).toList();
+  Widget _buildTicketsList(BuildContext context, String status) {
+    final user = context.watch<AuthProvider>().currentUser;
 
-    if (filteredTickets.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _getEmptyStateIcon(status),
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _getEmptyStateText(status),
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+    return StreamBuilder<List<Booking>>(
+      stream: _eventService.getUserBookingsStream(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Error loading tickets',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  if (snapshot.error.toString().contains('FAILED_PRECONDITION'))
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Text(
+                        'This usually means a Firestore Index is missing. Please check the debug console for the link to create it.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.blue, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
               ),
             ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredTickets.length,
-      itemBuilder: (context, index) {
-        final ticket = filteredTickets[index];
-        return _buildTicketCard(ticket, context);
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final allBookings = snapshot.data ?? [];
+        final now = DateTime.now();
+        final filteredTickets = allBookings.where((b) {
+          if (b.status == 'cancelled') return false;
+
+          if (status == 'upcoming') {
+            return b.eventDate.isAfter(now) ||
+                (b.eventDate.year == now.year &&
+                    b.eventDate.month == now.month &&
+                    b.eventDate.day == now.day);
+          } else if (status == 'completed') {
+            return b.eventDate.isBefore(now) &&
+                !(b.eventDate.year == now.year &&
+                    b.eventDate.month == now.month &&
+                    b.eventDate.day == now.day);
+          }
+          return false;
+        }).toList();
+
+        if (filteredTickets.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _getEmptyStateIcon(status),
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _getEmptyStateText(status),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredTickets.length,
+          itemBuilder: (context, index) {
+            final ticket = filteredTickets[index];
+            return _buildTicketCard(ticket, context);
+          },
+        );
       },
     );
   }
 
-  Widget _buildTicketCard(Map<String, dynamic> ticket, BuildContext context) {
-    final event = ticket['event'] as Map<String, dynamic>;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Event Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
+  Widget _buildTicketCard(Booking ticket, BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showTicketDetails(ticket, context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Event Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ticket.imageUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              ticket.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.broken_image,
+                                    color: Colors.grey);
+                              },
+                            ),
+                          )
+                        : const Icon(Icons.event, color: Colors.grey),
                   ),
-                  child: const Icon(Icons.event, color: Colors.grey),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ticket.eventTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          ticket.eventLocation,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Date: ${ticket.eventDate.day}/${ticket.eventDate.month}/${ticket.eventDate.year}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Ticket Details
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      const Text('Tickets:', style: TextStyle(fontSize: 14)),
+                      Text('${ticket.ticketCount}',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Paid:', style: TextStyle(fontSize: 14)),
+                      Text('${ticket.totalPrice} ETB',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Ticket Code:',
+                          style: TextStyle(fontSize: 14)),
                       Text(
-                        event['title'],
+                        ticket.ticketCode,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        event['location'],
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Date: ${event['date']}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                          color: Color(0xFF2563EB),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-
-          const Divider(height: 1),
-
-          // Ticket Details
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Tickets:', style: TextStyle(fontSize: 14)),
-                    Text('${ticket['ticketCount']}',
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total Paid:', style: TextStyle(fontSize: 14)),
-                    Text('${ticket['totalPrice']} ETB',
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Ticket Code:', style: TextStyle(fontSize: 14)),
-                    Text(
-                      ticket['ticketCode'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -269,7 +301,7 @@ class MyTicketsScreen extends StatelessWidget {
     }
   }
 
-  void _showTicketDetails(Map<String, dynamic> ticket, BuildContext context) {
+  void _showTicketDetails(Booking ticket, BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -278,13 +310,22 @@ class MyTicketsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Event: ${ticket['event']['title']}'),
-            Text('Location: ${ticket['event']['location']}'),
-            Text('Date: ${ticket['event']['date']}'),
-            Text('Tickets: ${ticket['ticketCount']}'),
-            Text('Total: ${ticket['totalPrice']} ETB'),
-            Text('Code: ${ticket['ticketCode']}'),
-            Text('Booked: ${ticket['bookingDate']}'),
+            Text('Event: ${ticket.eventTitle}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Location: ${ticket.eventLocation}'),
+            Text(
+                'Event Date: ${ticket.eventDate.day}/${ticket.eventDate.month}/${ticket.eventDate.year}'),
+            Text(
+                'Booked On: ${ticket.bookingDate.day}/${ticket.bookingDate.month}/${ticket.bookingDate.year}'),
+            const SizedBox(height: 12),
+            Text('Tickets: ${ticket.ticketCount}'),
+            Text('Total: ${ticket.totalPrice} ETB'),
+            const SizedBox(height: 12),
+            Text('Code: ${ticket.ticketCode}',
+                style: const TextStyle(
+                    color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+            Text('Status: ${ticket.status.toUpperCase()}'),
           ],
         ),
         actions: [

@@ -3,10 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:spota_events/app/providers/auth_provider.dart';
 import 'package:spota_events/features/booking/screens/my_tickets_screen.dart';
 import 'package:spota_events/features/profile/screens/settings_screen.dart';
-import 'package:spota_events/features/profile/screens/notifications_screen.dart';
-import 'package:spota_events/features/profile/screens/booking_history_screen.dart';
-import 'package:spota_events/features/profile/screens/payment_methods_screen.dart';
-import 'package:spota_events/features/profile/screens/help_support_screen.dart';
 import 'package:spota_events/features/profile/screens/edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -30,66 +26,88 @@ class ProfileScreen extends StatelessWidget {
           children: [
             // Profile Header
             Container(
-              padding: const EdgeInsets.all(24),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   // Profile Avatar
                   Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2563EB),
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withOpacity(0.1),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF2563EB).withOpacity(0.2),
+                        width: 2,
+                      ),
                     ),
                     child: const Icon(
                       Icons.person,
-                      size: 40,
-                      color: Colors.white,
+                      size: 50,
+                      color: Color(0xFF2563EB),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     user.name.isEmpty ? 'User' : user.name,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     user.email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey,
+                      color: Colors.grey[600],
                     ),
                   ),
                   if (user.phone.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
                       user.phone,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const EditProfileScreen()),
-                      );
-                    },
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('Edit Profile'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const EditProfileScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit Profile'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -132,39 +150,6 @@ class ProfileScreen extends StatelessWidget {
                   },
                 ),
                 _buildMenuTile(
-                  icon: Icons.history,
-                  title: 'Booking History',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const BookingHistoryScreen()),
-                    );
-                  },
-                ),
-                _buildMenuTile(
-                  icon: Icons.payment,
-                  title: 'Payment Methods',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const PaymentMethodsScreen()),
-                    );
-                  },
-                ),
-                _buildMenuTile(
-                  icon: Icons.notifications,
-                  title: 'Notifications',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const NotificationsScreen()),
-                    );
-                  },
-                ),
-                _buildMenuTile(
                   icon: Icons.settings,
                   title: 'Settings',
                   onTap: () {
@@ -172,17 +157,6 @@ class ProfileScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                           builder: (context) => const SettingsScreen()),
-                    );
-                  },
-                ),
-                _buildMenuTile(
-                  icon: Icons.help,
-                  title: 'Help & Support',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const HelpSupportScreen()),
                     );
                   },
                 ),

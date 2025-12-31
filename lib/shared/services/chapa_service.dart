@@ -3,10 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class ChapaService {
-  // TODO: Move to environment variables or configuration file
   static const String _baseUrl = 'https://api.chapa.co/v1';
-  static const String _publicKey = 'CHASECK_TEST-YOUR_PUBLIC_KEY'; // Placeholder
-  static const String _secretKey = 'CHASECK_TEST-YOUR_SECRET_KEY'; // Placeholder
+  static const String _publicKey =
+      'CHAPUBK_TEST-l33Kl0wzoCwiTjchl9X9cCmB3PWtuJGY';
+  static const String _secretKey =
+      'CHASECK_TEST-CiFYxzGBbsunuvvc1jEzb65pftnCotYo';
 
   /// Initialize a transaction
   /// Returns the checkout URL
@@ -20,7 +21,7 @@ class ChapaService {
     String currency = 'ETB',
   }) async {
     final url = Uri.parse('$_baseUrl/transaction/initialize');
-    
+
     try {
       final response = await http.post(
         url,
@@ -35,8 +36,10 @@ class ChapaService {
           'first_name': firstName,
           'last_name': lastName,
           'tx_ref': txRef,
-          'callback_url': 'https://checkout.chapa.co/checkout/payment-receipt/$txRef', // Placeholder
-          'return_url': 'https://checkout.chapa.co/checkout/payment-receipt/$txRef', // This will be intercepted
+          'callback_url':
+              'https://checkout.chapa.co/checkout/payment-receipt/$txRef',
+          'return_url':
+              'https://example.com/payment-success', // We will intercept this
           'customization[title]': title,
           'customization[description]': 'Payment for $title',
         }),
@@ -48,7 +51,7 @@ class ChapaService {
           return data['data']['checkout_url'];
         }
       }
-      
+
       debugPrint('Chapa Init Error: ${response.body}');
       return null;
     } catch (e) {
@@ -73,7 +76,7 @@ class ChapaService {
         final data = jsonDecode(response.body);
         return data['status'] == 'success';
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('Chapa Verify Error: $e');

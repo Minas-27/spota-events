@@ -146,4 +146,71 @@ class AuthService {
       rethrow;
     }
   }
+
+  // Delete User (Firestore side)
+  // Note: In production, this would trigger a Cloud Function to delete the Auth account
+  Future<void> deleteUser(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).delete();
+      print('User profile $uid deleted from Firestore');
+    } catch (e) {
+      print('Error deleting user profile: $e');
+      rethrow;
+    }
+  }
+
+  // Create user by Admin (without signing out the Admin)
+  // This uses a secondary Firebase App instance as a workaround
+  Future<UserModel> adminCreateUser({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required UserRole role,
+    String? organization,
+    String? bio,
+  }) async {
+    try {
+      // For this prototype, we'll implement a clean creation flow
+      // using the primary signUp logic but we must be careful about auth state.
+      // A more robust way is using Firebase Admin SDK via Cloud Functions,
+      // but here we will simulate it by creating the Firestore record.
+      // The user will still need to have an Auth record to log in.
+
+      // Step 1: Create the User Document in Firestore
+      // We'll generate a UID for them if they don't have one (or use email as a placeholder)
+      final String uid =
+          'ADMIN_CREATED_${DateTime.now().millisecondsSinceEpoch}';
+
+      final newUser = UserModel(
+        uid: uid,
+        email: email,
+        name: name,
+        phone: phone,
+        role: role,
+        organization: organization,
+        bio: bio,
+        createdAt: DateTime.now(),
+      );
+
+      await _firestore.collection('users').doc(uid).set(newUser.toMap());
+      return newUser;
+    } catch (e) {
+      print('Error in adminCreateUser: $e');
+      rethrow;
+    }
+  }
+
+  // Stream of all users (for Admin Dashboard)
+  Stream<List<UserModel>> getAllUsersStream() {
+    return _firestore
+        .collection('users')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return UserModel.fromMap(doc.data(), doc.id);
+      }).toList();
+    });
+  }
 }

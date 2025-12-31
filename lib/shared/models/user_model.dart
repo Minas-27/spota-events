@@ -66,4 +66,5 @@ class UserModel {
 enum UserRole {
   attendee,
   organizer,
+  admin,
 }

@@ -9,6 +9,10 @@ class Event {
   final int availableTickets;
   final String category;
   final String organizer;
+  final int totalTickets;
+  final String organizerId;
+  final DateTime createdAt;
+  final String status; // active, cancelled
 
   const Event({
     required this.id,
@@ -19,50 +23,85 @@ class Event {
     required this.imageUrl,
     required this.price,
     required this.availableTickets,
+    required this.totalTickets,
     required this.category,
     required this.organizer,
+    required this.organizerId,
+    required this.createdAt,
+    this.status = 'active',
   });
 
-  // Sample data for development
-  static List<Event> sampleEvents = [
-    Event(
-      id: '1',
-      title: 'Bahir Dar Music Festival',
-      description:
-          'The biggest annual music festival featuring top artists from Ethiopia and beyond. Join us for an unforgettable night of music and entertainment.',
-      location: 'City Stadium, Bahir Dar',
-      date: DateTime(2024, 12, 15, 18, 0),
-      imageUrl: 'assets/images/music_festival.jpg',
-      price: 150.0,
-      availableTickets: 87,
-      category: 'Music',
-      organizer: 'BDU Arts Club',
-    ),
-    Event(
-      id: '2',
-      title: 'BDU Tech Conference 2024',
-      description:
-          'Annual technology conference featuring workshops, keynote speakers, and networking opportunities for tech enthusiasts.',
-      location: 'EiTEX Campus, Bahir Dar University',
-      date: DateTime(2024, 11, 25, 9, 0),
-      imageUrl: 'assets/images/tech_conference.jpg',
-      price: 50.0,
-      availableTickets: 45,
-      category: 'University',
-      organizer: 'Bahir Dar University',
-    ),
-    Event(
-      id: '3',
-      title: 'Lake Tana Boat Race',
-      description:
-          'Exciting boat racing competition on Lake Tana. Watch teams compete for the championship trophy.',
-      location: 'Lake Tana, Bahir Dar',
-      date: DateTime(2024, 12, 10, 8, 0),
-      imageUrl: 'assets/images/boat_race.jpg',
-      price: 25.0,
-      availableTickets: 200,
-      category: 'Sports',
-      organizer: 'Bahir Dar Sports Club',
-    ),
-  ];
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'location': location,
+      'date': date.toIso8601String(),
+      'imageUrl': imageUrl,
+      'price': price,
+      'availableTickets': availableTickets,
+      'totalTickets': totalTickets,
+      'category': category,
+      'organizer': organizer,
+      'organizerId': organizerId,
+      'createdAt': createdAt.toIso8601String(),
+      'status': status,
+    };
+  }
+
+  factory Event.fromMap(Map<String, dynamic> map) {
+    return Event(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      location: map['location'] ?? '',
+      date: map['date'] != null ? DateTime.parse(map['date']) : DateTime.now(),
+      imageUrl: map['imageUrl'] ?? '',
+      price: (map['price'] ?? 0.0).toDouble(),
+      availableTickets: map['availableTickets'] ?? 0,
+      totalTickets: map['totalTickets'] ?? 0,
+      category: map['category'] ?? '',
+      organizer: map['organizer'] ?? '',
+      organizerId: map['organizerId'] ?? '',
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      status: map['status'] ?? 'active',
+    );
+  }
+
+  Event copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? location,
+    DateTime? date,
+    String? imageUrl,
+    double? price,
+    int? availableTickets,
+    int? totalTickets,
+    String? category,
+    String? organizer,
+    String? organizerId,
+    DateTime? createdAt,
+    String? status,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      location: location ?? this.location,
+      date: date ?? this.date,
+      imageUrl: imageUrl ?? this.imageUrl,
+      price: price ?? this.price,
+      availableTickets: availableTickets ?? this.availableTickets,
+      totalTickets: totalTickets ?? this.totalTickets,
+      category: category ?? this.category,
+      organizer: organizer ?? this.organizer,
+      organizerId: organizerId ?? this.organizerId,
+      createdAt: createdAt ?? this.createdAt,
+      status: status ?? this.status,
+    );
+  }
 }

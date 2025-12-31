@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:spota_events/shared/models/event_model.dart';
+import 'package:provider/provider.dart';
+import 'package:spota_events/app/providers/auth_provider.dart';
+import 'package:spota_events/shared/services/event_service.dart';
+import 'create_event_screen.dart';
 
 class ManageEventsScreen extends StatefulWidget {
   const ManageEventsScreen({super.key});
@@ -9,56 +13,15 @@ class ManageEventsScreen extends StatefulWidget {
 }
 
 class _ManageEventsScreenState extends State<ManageEventsScreen> {
-  // Sample organizer events
-  List<Event> organizerEvents = [
-    Event(
-      id: '1',
-      title: 'Bahir Dar Music Festival',
-      description:
-          'The biggest annual music festival in Bahir Dar featuring top artists from around the country.',
-      location: 'City Stadium, Bahir Dar',
-      date: DateTime(2024, 12, 15, 18, 0),
-      imageUrl: 'assets/images/music_festival.jpg',
-      price: 150.0,
-      availableTickets: 87,
-      category: 'Music',
-      organizer: 'My Organization',
-    ),
-    Event(
-      id: '2',
-      title: 'Tech Workshop Series',
-      description:
-          'Learn latest technologies including Flutter, AI, and Web Development.',
-      location: 'EiTEX Campus, Bahir Dar University',
-      date: DateTime(2024, 11, 30, 10, 0),
-      imageUrl: 'assets/images/tech_workshop.jpg',
-      price: 50.0,
-      availableTickets: 45,
-      category: 'University',
-      organizer: 'My Organization',
-    ),
-    Event(
-      id: '3',
-      title: 'Cultural Night 2024',
-      description:
-          'Experience diverse cultures through music, dance, and traditional food.',
-      location: 'Cultural Center, Bahir Dar',
-      date: DateTime(2024, 10, 20, 19, 0),
-      imageUrl: 'assets/images/cultural_night.jpg',
-      price: 75.0,
-      availableTickets: 23,
-      category: 'Cultural',
-      organizer: 'My Organization',
-    ),
-  ];
+  final EventService _eventService = EventService();
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final totalTicketsSold = organizerEvents.fold(
-        0, (sum, event) => sum + (100 - event.availableTickets));
-    final totalRevenue = organizerEvents.fold(0.0,
-        (sum, event) => sum + (event.price * (100 - event.availableTickets)));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Events'),
@@ -67,120 +30,154 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Stats Overview - Cleaner version
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: Colors.white,
+      body: StreamBuilder<List<Event>>(
+        stream: _eventService.getOrganizerEventsStream(
+            context.read<AuthProvider>().currentUser.uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final events = snapshot.data ?? [];
+
+          final totalTicketsSold = events.fold(
+              0,
+              (sum, event) =>
+                  sum + (event.totalTickets - event.availableTickets));
+          final totalRevenue = events.fold(
+              0.0,
+              (sum, event) =>
+                  sum +
+                  (event.price *
+                      (event.totalTickets - event.availableTickets)));
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Stream handles updates, but we can keep it as a UI pattern
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Overview',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStatCard(
-                        value: '${organizerEvents.length}',
-                        label: 'Events',
-                        icon: Icons.event,
-                        color: Colors.blue,
-                      ),
-                      _buildStatCard(
-                        value: '$totalTicketsSold',
-                        label: 'Sold',
-                        icon: Icons.confirmation_number,
-                        color: Colors.green,
-                      ),
-                      _buildStatCard(
-                        value: '${totalRevenue.toInt()}',
-                        label: 'Revenue',
-                        icon: Icons.monetization_on,
-                        color: Colors.orange,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Events List Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Your Events',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '${organizerEvents.length} total',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Events List
-            organizerEvents.isEmpty
-                ? Container(
-                    height: 300,
-                    alignment: Alignment.center,
+                  // Stats Overview
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    color: Colors.white,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.event_available,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
                         const Text(
-                          'No events yet',
+                          'Overview',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Create your first event to get started',
-                          style: TextStyle(color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildStatCard(
+                              value: '${events.length}',
+                              label: 'Events',
+                              icon: Icons.event,
+                              color: Colors.blue,
+                            ),
+                            _buildStatCard(
+                              value: '$totalTicketsSold',
+                              label: 'Sold',
+                              icon: Icons.confirmation_number,
+                              color: Colors.green,
+                            ),
+                            _buildStatCard(
+                              value: '${totalRevenue.toInt()}',
+                              label: 'Revenue',
+                              icon: Icons.monetization_on,
+                              color: Colors.orange,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      children: organizerEvents
-                          .map((event) => _buildEventCard(event, context))
-                          .toList(),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Events List Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Your Events',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${events.length} total',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-            const SizedBox(height: 20),
-          ],
-        ),
+                  // Events List
+                  events.isEmpty
+                      ? Container(
+                          height: 300,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.event_available,
+                                size: 64,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No events yet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Create your first event to get started',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            children: events
+                                .map((event) => _buildEventCard(event, context))
+                                .toList(),
+                          ),
+                        ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -232,8 +229,9 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
   }
 
   Widget _buildEventCard(Event event, BuildContext context) {
-    final ticketsSold = 100 - event.availableTickets;
-    final progress = ticketsSold / 100;
+    final ticketsSold = event.totalTickets - event.availableTickets;
+    final progress =
+        event.totalTickets > 0 ? ticketsSold / event.totalTickets : 0.0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -263,8 +261,19 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
                   color: const Color(0xFF2563EB).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child:
-                    const Icon(Icons.event, color: Color(0xFF2563EB), size: 30),
+                child: event.imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.network(
+                          event.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.event,
+                                  color: Color(0xFF2563EB), size: 30),
+                        ),
+                      )
+                    : const Icon(Icons.event,
+                        color: Color(0xFF2563EB), size: 30),
               ),
               const SizedBox(width: 16),
               // Event Details
@@ -295,25 +304,42 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton(
-                    onPressed: () => _editEvent(event),
-                    icon: const Icon(Icons.edit_outlined,
-                        size: 20, color: Color(0xFF2563EB)),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => _editEvent(event),
+                        icon: const Icon(Icons.edit_outlined,
+                            size: 20, color: Color(0xFF2563EB)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => _deleteEvent(event),
+                        icon: const Icon(Icons.delete_outline,
+                            size: 20, color: Colors.red),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      color: (event.status == 'cancelled'
+                              ? Colors.red
+                              : const Color(0xFF10B981))
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'Active',
+                    child: Text(
+                      event.status == 'cancelled' ? 'Cancelled' : 'Active',
                       style: TextStyle(
-                        color: Color(0xFF10B981),
+                        color: event.status == 'cancelled'
+                            ? Colors.red
+                            : const Color(0xFF10B981),
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -335,7 +361,7 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$ticketsSold / 100 Tickets Sold',
+                          '$ticketsSold / ${event.totalTickets} Tickets Sold',
                           style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[600],
@@ -392,12 +418,56 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
     );
   }
 
-  void _editEvent(Event event) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editing: ${event.title}'),
-        behavior: SnackBarBehavior.floating,
+  Future<void> _editEvent(Event event) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateEventScreen(event: event),
       ),
     );
+
+    if (result == true) {
+      // Stream handles updates automatically
+    }
+  }
+
+  Future<void> _deleteEvent(Event event) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Event'),
+        content: Text(
+            'Are you sure you want to cancel "${event.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _eventService.deleteEvent(event.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Event cancelled successfully')),
+          );
+          // Stream handles updates automatically
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error cancelling event: $e')),
+          );
+        }
+      }
+    }
   }
 }
