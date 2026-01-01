@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:spota_events/app/providers/auth_provider.dart';
 import 'package:spota_events/shared/models/booking_model.dart';
 import 'package:spota_events/shared/services/event_service.dart';
+import 'package:spota_events/features/booking/widgets/modern_ticket_dialog.dart';
 
 class MyTicketsScreen extends StatelessWidget {
   const MyTicketsScreen({super.key});
@@ -304,37 +305,8 @@ class MyTicketsScreen extends StatelessWidget {
   void _showTicketDetails(Booking ticket, BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ticket Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Event: ${ticket.eventTitle}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Location: ${ticket.eventLocation}'),
-            Text(
-                'Event Date: ${ticket.eventDate.day}/${ticket.eventDate.month}/${ticket.eventDate.year}'),
-            Text(
-                'Booked On: ${ticket.bookingDate.day}/${ticket.bookingDate.month}/${ticket.bookingDate.year}'),
-            const SizedBox(height: 12),
-            Text('Tickets: ${ticket.ticketCount}'),
-            Text('Total: ${ticket.totalPrice} ETB'),
-            const SizedBox(height: 12),
-            Text('Code: ${ticket.ticketCode}',
-                style: const TextStyle(
-                    color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
-            Text('Status: ${ticket.status.toUpperCase()}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+      barrierColor: Colors.black.withOpacity(0.8), // Darken background more
+      builder: (context) => ModernTicketDialog(ticket: ticket),
     );
   }
 }

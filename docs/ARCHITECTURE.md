@@ -1,71 +1,123 @@
-# 🏗️ SPOTA Architecture Overview
+# 🏗️ SPOTA Architecture & Engineering Guide
 
-SPOTA is built using a **Feature-based Clean Architecture** to ensure the codebase remains maintainable, testable, and scalable as the project grows.
+This document provides a technical deep-dive into the architecture, design patterns, and engineering practices used in the **SPOTA** project.
+
+---
+
+## 📐 Architectural Pattern
+
+SPOTA follows a **Feature-Based Clean Architecture**. This approach organizes code primarily by *what it does* (features) rather than *what it is* (layers). This ensures:
+- **Scalability:** New features can be added without modifying unrelated code.
+- **Maintainability:** Code related to a specific feature is kept together.
+- **Testability:** Business logic is separated from UI.
+
+### Design Principles
+- **Separation of Concerns:** UI, Business Logic, and Data layers are distinct.
+- **Dependency Injection:** Services and Repositories are provided via `Provider`.
+- **Single Responsibility:** Each class has one clear purpose.
 
 ---
 
 ## 📂 Directory Structure
 
-The `lib/` directory is organized into four main layers:
+Here is the high-level organization of the `lib/` directory:
 
-### 1. `app/` (Application Layer)
-- **Purpose:** Contains application-wide configurations that tie the layers together.
-- **Key Files:**
-  - `app.dart`: The main application widget and theme configuration.
-  - `providers/`: Global state management providers (e.g., `AuthProvider`).
-  - `routes/`: Centralized route definitions.
+```mermaid
+graph TD
+    lib[lib/] --> app[app/]
+    lib --> core[core/]
+    lib --> features[features/]
+    lib --> shared[shared/]
 
-### 2. `features/` (Feature Layer)
-- **Purpose:** This is where the core business logic and UI reside, organized by functional module.
-- **Structure:** Each feature (e.g., `auth`, `events`, `organizer`) contains its own:
-  - `screens/`: UI pages.
-  - `widgets/`: Feature-specific reusable UI components.
-- **Key Features:**
-  - `auth/`: Login, Registration, and Password Recovery.
-  - `events/`: Event listing, search, and details.
-  - `booking/`: Ticket purchasing workflow and ticket management.
-  - `organizer/`: Event creation and analytics for event owners.
-  - `admin/`: Platform-wide oversight and user management.
+    app --> config[App Config & Routes]
+    app --> providers[Global Providers]
 
-### 3. `shared/` (Shared/Data Layer)
-- **Purpose:** Reusable components, models, and services used across multiple features.
-- **Components:**
-  - `models/`: Data classes (e.g., `Event`, `UserModel`, `Booking`).
-  - `services/`: Business logic and external API communication (e.g., `EventService`, `AuthService`, `ChapaService`).
-  - `widgets/`: Global common UI components (e.g., buttons, inputs).
+    core --> constants[Constants]
+    core --> theme[Theme & Styles]
+    core --> utils[Utilities]
 
-### 4. `core/` (Core Layer)
-- **Purpose:** Low-level configurations and utilities.
-- **Components:**
-  - `constants/`: Configuration keys, endpoint URLs, and fixed strings.
-  - `theme/`: Global styling, color palettes, and typography.
-  - `utils/`: Common utility functions (e.g., date formatting, validation).
+    features --> auth[Auth Feature]
+    features --> events[Events Feature]
+    features --> booking[Booking Feature]
+    features --> profile[Profile Feature]
+
+    shared --> services[API Services]
+    shared --> models[Data Models]
+    shared --> widgets[Global Widgets]
+```
+
+### Detailed Breakdown
+
+#### 1. `features/*`
+Each folder here represents a domain capability.
+- **auth/**: Login, Registration, Password Reset.
+- **events/**: Listing, Searching, and Filtering events.
+- **booking/**: Ticket selection, Payment (Chapa), and Confirmation.
+- **organizer/**: Organizer dashboard, Event creation, Analytics.
+- **profile/**: User profile, Ticket history, Settings.
+- **admin/**: User oversight and platform metrics.
+
+Inside each feature:
+- `screens/`: Full-page widgets (Scaffolds).
+- `widgets/`: Smaller, reusable components specific to that feature.
+
+#### 2. `shared/*`
+Code used by multiple features.
+- **services/**:
+  - `AuthService`: Firebase Authentication wrapper.
+  - `EventService`: Firestore CRUD operations for events.
+  - `ChapaService`: HTTP client for Chapa payment gateway.
+  - `CloudinaryService`: Image upload handling.
+  - `AfroMessageService`: SMS notification logic.
+- **models/**: Dart data classes (`Event`, `User`, `Booking`) with `fromJson`/`toJson`.
+
+#### 3. `core/*`
+Application foundation.
+- `theme/`: Colors, Typography, and AppTheme definitions.
+- `utils/`: Validators, DateFormatters, Helper functions.
 
 ---
 
-## 🔄 Data Flow
+## 🔄 Data Flow Strategy
 
-1. **User Interaction:** The user interacts with a `Screen` or `Widget` in the `features/` layer.
-2. **State Management:** The UI triggers a method in a `Provider` (Application layer).
-3. **Business Logic:** The `Provider` calls a `Service` in the `shared/` layer.
-4. **External API:** The `Service` communicates with **Firebase** (Firestore, Auth) or external APIs (**Chapa**, **AfroMessage**, **Cloudinary**).
-5. **Data Processing:** The `Service` maps raw response data into `Models` (Shared layer).
-6. **UI Update:** The `Provider` notifies listeners, and the UI rebuilds with the new data.
+We use a **Unidirectional Data Flow** powered by `Provider`.
+
+### 1. The READ Flow (Fetching Data)
+1. **Ui Widget** (e.g., `HomeScreen`) requests data.
+2. **Provider** exposes a `Stream` or `Future` from the **Service**.
+3. **Service** (`EventService`) queries **Firestore**.
+4. **Firestore** returns a snapshot.
+5. **Model** parses the snapshot into Dart objects (`List<Event>`).
+6. **UI** rebuilds automatically via `StreamBuilder` or `Consumer`.
+
+### 2. The WRITE Flow (User Action)
+1. **User** interacts (e.g., "Book Ticket").
+2. **UI** calls a method on the **Service** (e.g., `eventService.bookTickets()`).
+3. **Service** performs business logic:
+    - Calls **Chapa API** for payment.
+    - Updates **Firestore** (decrements tickets).
+    - Triggers **SMS** via `AfroMessageService`.
+4. **Service** returns success/failure.
+5. **UI** shows feedback (SnackBar/Dialog) and effectively updates via the stream.
 
 ---
 
-## 🛠 State Management Patterns
+## 🛠️ State Management
 
-- **Provider:** Used for most reactive state management (Auth state, UI state).
-- **Streams:** Heavily utilized for real-time data from Firestore (e.g., `getEventsStream()`), allowing the UI to update automatically when data changes in the cloud.
+**Provider** is the primary state management solution.
+
+- `AuthProvider`: Manages user session state (`currentUser`, `isLoading`).
+- `StreamProvider` (or direct streams): Used for real-time data like Event Lists.
+- `StatefulWidget`: Used for ephemeral UI state (e.g., current tab, text input) where global state is overkill.
 
 ---
 
-## 🔒 Security & Roles
+## 🔒 Security & Data Integrity
 
-SPOTA implements a robust Role-Based Access Control (RBAC) system:
-- **Attendees:** Can browse and book events.
-- **Organizers:** Can create and manage their own events.
-- **Administrators:** Can manage users and view platform analytics.
+- **Role-Based Access Control (RBAC):** 
+    - Determining user role (`attendee`, `organizer`, `admin`) at login.
+    - UI guards (conditional rendering) to hide unauthorized screens.
+- **Firestore Rules:** Backend enforcement to prevent unauthorized writes.
+- **Payment Verification:** Chapa transactions are verified server-side (or via secure API calls) before confirming bookings.
 
-Permissions are enforced at both the UI level (conditional navigation) and the Backend level (Firestore Security Rules).
+---
