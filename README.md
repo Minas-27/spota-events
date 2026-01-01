@@ -1,8 +1,7 @@
-# 🎯 SPOTA - Find Your Vibe
+# SPOTA - Find Your Vibe
 
 <div align="center">
 
-![Spota Banner](https://via.placeholder.com/1200x400.png?text=SPOTA+Events)
 
 **The Ultimate Event Discovery & Management Platform for Bahir Dar**
 
@@ -129,11 +128,11 @@ For a deep dive, check out [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## 👥 Contributors
 
-- **Abraham Addisu** - Lead Developer
-- **Hailemariam Yohannes** - UI/UX
-- **Henok Ashenafi** - Backend Integration
-- **Esubalew Worku** - Quality Assurance
-- **Birtukan Nigussie** - Documentation & Research
+- **Abraham Addisu**
+- **Hailemariam Yohannes**
+- **Henok Ashenafi**
+- **Esubalew Worku**
+- **Birtukan Nigussie**
 
 ---
 
